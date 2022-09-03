@@ -1,0 +1,28 @@
+{
+  "name": "roam-depot-export-formatter",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "prebuild:roam": "npm install",
+    "build:roam": "roamjs-scripts build --depot",
+    "dev": "roamjs-scripts dev --depot"
+  },
+  "keywords": [
+    "roamresearch"
+  ],
+  "author": "Ryan Guill",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/remarkable": "^1.7.5",
+    "prettier": "^2.7.1",
+    "roamjs-scripts": "^0.22.0",
+    "typescript": "^4.8.2",
+    "webpack": "^5.73.0",
+    "webpack-cli": "^4.10.0"
+  },
+  "dependencies": {
+    "remarkable": "^2.0.1",
+    "roamjs-components": "^0.72.4"
+  }
+}
