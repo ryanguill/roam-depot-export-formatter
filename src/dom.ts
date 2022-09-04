@@ -1,4 +1,3 @@
-import { formatter_init } from "./formatter";
 import { htmlToElement } from "./utils";
 
 const html = `
@@ -151,7 +150,11 @@ const html = `
 		</div>
 		
 		<div class="rgef_output-container rgef_container">
-		  <div class="rgef_container-label">output</div>
+		  <div class="rgef_container-label">output 
+		  	<span class="bp3-button bp3-minimal bp3-small dont-focus-block rgef_copy_button" id="rgef_copy_output">
+				<span class="bp3-icon bp3-icon-clipboard"></span>
+			</span>
+		  </div>
 		  <div class="rgef_output-textarea-container">
 			<textarea id="rgef_output" name="output"></textarea>
 			
@@ -235,6 +238,10 @@ const css = `
 	font-size: larger;
 	font-weight: bold;
 	border-bottom: 2px solid black;
+  }
+
+  .rgef_copy_button {
+	margin-bottom: 2px;		
   }
   
   .rgef_container {
@@ -320,8 +327,6 @@ export function setupDOM() {
 				${css}
 			</style>`)
 	);
-
-	formatter_init();
 }
 
 export function cleanupDOM() {

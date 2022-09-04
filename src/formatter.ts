@@ -1,15 +1,18 @@
 const { Remarkable } = require("remarkable");
 var md = new Remarkable({ breaks: true });
-
 md.inline.ruler.enable(["ins", "mark", "sub", "sup"]);
 
-// @ts-ignore
-window.setSelectValue = setSelectValue;
+import { getElementValue, setElementValue, addEventListener } from "./utils";
+
 function setSelectValue(
 	id: string,
-	value: string | null,
+	value: string | null | boolean,
 	set_to_default: boolean = false
 ) {
+	if (typeof value === "boolean") {
+		value = String(value);
+	}
+
 	const $target = document.getElementById(id) as HTMLSelectElement;
 
 	if ($target === null) {
@@ -17,7 +20,7 @@ function setSelectValue(
 		return;
 	}
 
-	console.log({ id, value, set_to_default, found: $target !== null });
+	//console.log({ id, value, set_to_default, found: $target !== null });
 
 	const options = [...$target.options];
 
@@ -66,16 +69,6 @@ function setSelectValue(
 	}
 }
 
-function addEventListener(
-	selector: string,
-	eventName: string,
-	eventHandler: (e: Event) => any
-) {
-	const el = [...document.querySelectorAll(selector)];
-
-	el.forEach((e: Element) => e.addEventListener(eventName, eventHandler));
-}
-
 export function formatter_init() {
 	addEventListener("label.rgef_toggle-on-click", "click", function (e) {
 		const $target = (e.target as Element)?.querySelector("select");
@@ -108,6 +101,32 @@ export function formatter_init() {
 		render();
 	});
 
+	addEventListener("#rgef_copy_output", "click", function () {
+		const output = getElementValue("#rgef_output");
+		navigator.clipboard.writeText(output).then(
+			function () {},
+			function (err) {
+				console.error("Async: Could not copy text: ", err);
+			}
+		);
+	});
+
+	// this isnt working the way I would like.
+	addEventListener("#rgef_copy_rendered", "click", function () {
+		window.getSelection().removeAllRanges();
+		window
+			.getSelection()
+			.selectAllChildren(document.getElementById("rgef_rendered-output"));
+		const output = window.getSelection().toString();
+		navigator.clipboard.writeText(output).then(
+			function () {},
+			function (err) {
+				console.error("Async: Could not copy text: ", err);
+			}
+		);
+		window.getSelection().removeAllRanges();
+	});
+
 	render();
 }
 
@@ -121,31 +140,8 @@ function loadSettingsFromLocalStorage() {
 	if (storedValue) {
 		const settings = JSON.parse(storedValue);
 		for (let key of Object.keys(settings)) {
-			// TODO: theres certainly a better way to do this, just getting it to work for now during the port
-			let value = settings[key];
-			if (value === true) {
-				value = "true";
-			} else if (value === false) {
-				value = "false";
-			}
-			setSelectValue(`rgef_${key}`, value);
+			setSelectValue(`rgef_${key}`, settings[key]);
 		}
-	}
-}
-
-function getElementValue(selector: string): string | null {
-	const element = document.querySelector(selector) as any;
-	if (element) {
-		return element.value;
-	} else {
-		return null;
-	}
-}
-
-function setElementValue(selector: string, value: string): void {
-	const element = document.querySelector(selector) as any;
-	if (element) {
-		element.value = value;
 	}
 }
 

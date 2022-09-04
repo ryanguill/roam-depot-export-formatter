@@ -1,5 +1,31 @@
 import resolveRefs from "roamjs-components/dom/resolveRefs";
 
+export function getElementValue(selector: string): string | null {
+	const element = document.querySelector(selector) as any;
+	if (element) {
+		return element.value;
+	} else {
+		return null;
+	}
+}
+
+export function setElementValue(selector: string, value: string): void {
+	const element = document.querySelector(selector) as any;
+	if (element) {
+		element.value = value;
+	}
+}
+
+export function addEventListener(
+	selector: string,
+	eventName: string,
+	eventHandler: (e: Event) => any
+) {
+	const el = [...document.querySelectorAll(selector)];
+
+	el.forEach((e: Element) => e.addEventListener(eventName, eventHandler));
+}
+
 export function htmlToElement(html: string) {
 	var template = document.createElement("template");
 	html = html.trim(); // Never return a text node of whitespace as the result
@@ -20,6 +46,10 @@ export function setSettingDefault(
 	return storedSetting;
 }
 
+/*
+	these next few funtions are taken and adapted from https://github.com/dvargas92495/roamjs-workbench
+	Credit Dave Vargas @dvargas92495
+*/
 export type BlockInfo = {
 	title: string;
 	string: string;

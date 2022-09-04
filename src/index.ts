@@ -1,15 +1,10 @@
 import "roamjs-components/types";
 import { cleanupDOM, setupDOM } from "./dom";
-import { render } from "./formatter";
+import { formatter_init, render } from "./formatter";
 
-import { iterateThroughTree, htmlToElement } from "./utils";
+import { iterateThroughTree } from "./utils";
 
-const EXTENSION_NAME = "export-formatter";
 const CONTEXT_MENU_COMMAND_LABEL = "Export Formatter";
-
-function log(...args: any[]) {
-	console.log(EXTENSION_NAME, ...args);
-}
 
 async function commandCallback(block: any) {
 	/*
@@ -43,9 +38,7 @@ async function commandCallback(block: any) {
 }
 
 async function onload({ extensionAPI }: { extensionAPI: any }) {
-	// try and add an item to the context menu
 	console.log("onload");
-	console.log(window);
 
 	await window.roamAlphaAPI.ui.blockContextMenu.addCommand({
 		label: CONTEXT_MENU_COMMAND_LABEL,
@@ -53,6 +46,7 @@ async function onload({ extensionAPI }: { extensionAPI: any }) {
 	});
 
 	setupDOM();
+	formatter_init();
 }
 
 async function onunload() {
