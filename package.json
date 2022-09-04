@@ -1,7 +1,7 @@
 {
   "name": "roam-depot-export-formatter",
-  "version": "0.0.0",
-  "description": "",
+  "version": "0.0.1",
+  "description": "Adds a context menu option to export the selected node with various formatting options, such as removing roam specific syntax.",
   "main": "index.js",
   "scripts": {
     "prebuild:roam": "npm install",

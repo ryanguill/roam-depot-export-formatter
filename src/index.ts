@@ -38,7 +38,7 @@ async function commandCallback(block: any) {
 }
 
 async function onload({ extensionAPI }: { extensionAPI: any }) {
-	console.log("onload");
+	//console.log("onload");
 
 	await window.roamAlphaAPI.ui.blockContextMenu.addCommand({
 		label: CONTEXT_MENU_COMMAND_LABEL,
@@ -50,7 +50,7 @@ async function onload({ extensionAPI }: { extensionAPI: any }) {
 }
 
 async function onunload() {
-	console.log("onunload");
+	//console.log("onunload");
 
 	await window.roamAlphaAPI.ui.blockContextMenu.removeCommand({
 		label: CONTEXT_MENU_COMMAND_LABEL,
