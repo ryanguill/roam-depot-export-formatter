@@ -146,6 +146,18 @@ const html = `
 				</select>
 			  </label>
 			</div>
+			<div class="rgef_setting">
+			  <label
+				class="rgef_toggle-on-click"
+				title="removes blocks with queries"
+			  >
+				remove queries?
+				<select id="rgef_remove_blocks_with_queries" class="rgef_hidden-select-setting" data-default="false">
+				  <option value="false">No</option>
+				  <option value="true">Yes</option>
+				</select>
+			  </label>
+			</div>
 		  </form>
 		</div>
 		

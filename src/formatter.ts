@@ -158,6 +158,7 @@ interface settings {
 	remove_hashtag_marks: boolean;
 	remove_todos: boolean;
 	remove_namespaces: boolean;
+	remove_blocks_with_queries: boolean;
 }
 
 function getSettingsFromDom(): settings {
@@ -178,6 +179,8 @@ function getSettingsFromDom(): settings {
 			getElementValue("#rgef_remove_hashtag_marks") === "true",
 		remove_todos: getElementValue("#rgef_remove_todos") === "true",
 		remove_namespaces: getElementValue("#rgef_remove_namespaces") === "true",
+		remove_blocks_with_queries:
+			getElementValue("#rgef_remove_blocks_with_queries") === "true",
 	};
 }
 
@@ -219,6 +222,10 @@ export function render() {
 
 	if (settings.remove_namespaces) {
 		result = removeNamespaces(result);
+	}
+
+	if (settings.remove_blocks_with_queries) {
+		result = removeBlocksWithQueries(result);
 	}
 
 	if (settings.remove_double_brackets) {
@@ -418,6 +425,17 @@ function removeNamespaces(input: string): string {
 	if (matches.length > 0) {
 		return removeNamespaces(result);
 	}
+	return result;
+}
+
+function removeBlocksWithQueries(input: string): string {
+	const result = input
+		.split("\n")
+		.filter(function (line) {
+			return line.match(/\{\{query:.+?\}\}/gm) === null;
+		})
+		.join("\n");
+
 	return result;
 }
 
