@@ -164,7 +164,8 @@ const html = `
 		<div class="rgef_output-container rgef_container">
 		  <div class="rgef_container-label">output 
 		  	<span class="bp3-button bp3-minimal bp3-small dont-focus-block rgef_copy_button" id="rgef_copy_output">
-				<span class="bp3-icon bp3-icon-clipboard"></span>
+					[copy]
+				</span>
 			</span>
 		  </div>
 		  <div class="rgef_output-textarea-container">
@@ -173,7 +174,11 @@ const html = `
 		  </div>
 		</div>
 		<div class="rgef_rendered-container rgef_container">
-		  <div class="rgef_container-label">rendered markdown</div>
+		  <div class="rgef_container-label">rendered markdown
+				<span class="bp3-button bp3-minimal bp3-small dont-focus-block rgef_copy_button" id="rgef_copy_rendered">
+					[copy]
+				</span>
+			</div>
 		  <div id="rgef_rendered-output"></div>
 		</div>
 	  </div>
