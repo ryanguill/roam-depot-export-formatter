@@ -1,4 +1,7 @@
 const { Remarkable } = require("remarkable");
+
+import { BLOCK_DELIMITER } from "./index";
+
 var md = new Remarkable({ breaks: true });
 md.inline.ruler.enable(["ins", "mark", "sub", "sup"]);
 
@@ -249,7 +252,7 @@ export function render() {
 		result = removeFormatting(result);
 	}
 
-	setElementValue("#rgef_output", result);
+	setElementValue("#rgef_output", result.replaceAll(BLOCK_DELIMITER, "\n"));
 
 	const rendered_output_element = document.getElementById(
 		"rgef_rendered-output"
@@ -263,7 +266,7 @@ export function render() {
 
 function convertForMarkdown(input: string) {
 	return input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line.replace(/__/gm, `_`);
 		})
@@ -285,22 +288,22 @@ function convertForMarkdown(input: string) {
 
 function convertTodoAndDone(input: string) {
 	return input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line.replace("{{[[TODO]]}}", "☐").replace("{{[[DONE]]}}", "☑︎");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 }
 
 function removeTodos(input: string) {
 	return input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line
 				.replace(/\{\{\[\[TODO\]\]\}\}\s?/, "")
 				.replace(/\{\{\[\[DONE\]\]\}\}\s?/, "");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 }
 
 function addLineBreaksBeforeParagraphs(
@@ -308,7 +311,7 @@ function addLineBreaksBeforeParagraphs(
 	numberOfLineBreaks: number
 ) {
 	return input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line, index) {
 			//dont add line breaks before the first paragraph
 			if (index > 0 && numberOfLineBreaks > 0 && line.trimStart() === line) {
@@ -316,30 +319,33 @@ function addLineBreaksBeforeParagraphs(
 			}
 			return line;
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 }
 
 function ignoreParentNode(input: string) {
-	return flattenIndentation(input.split("\n").slice(1).join("\n"), 1);
+	return flattenIndentation(
+		input.split(BLOCK_DELIMITER).slice(1).join(BLOCK_DELIMITER),
+		1
+	);
 }
 
 function flattenIndentation(input: string, flatten_indentation: number) {
 	if (flatten_indentation > 5) {
 		return input
-			.split("\n")
+			.split(BLOCK_DELIMITER)
 			.map(function (line) {
 				return line.trimStart();
 			})
-			.join("\n");
+			.join(BLOCK_DELIMITER);
 	} else {
 		let output = input;
 		for (let idx = 0; idx < flatten_indentation; idx++) {
 			output = output
-				.split("\n")
+				.split(BLOCK_DELIMITER)
 				.map(function (line) {
 					return line.replace(/^\t(.+)/gm, "$1");
 				})
-				.join("\n");
+				.join(BLOCK_DELIMITER);
 		}
 		return output;
 	}
@@ -347,39 +353,39 @@ function flattenIndentation(input: string, flatten_indentation: number) {
 
 function removeBullets(input: string) {
 	return input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line.replace(/^(\s*)-\s/gm, "$1");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 }
 
 function removeColonFromAttributes(input: string) {
 	return input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line.replace(/\b(.+)\:\:/gm, "$1:");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 }
 
 function removeQuotes(input: string) {
 	return input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line.replace(/\"(.+)\"/gm, "$1");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 }
 
 function removeHashtagMarks(input: string): string {
 	const regexp = /\#(.+)\b/gm;
 	const result = input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line.replace(regexp, "$1");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 
 	const matches = [...result.matchAll(regexp)];
 	if (matches.length > 0) {
@@ -391,11 +397,11 @@ function removeHashtagMarks(input: string): string {
 function removeHashtags(input: string) {
 	const regexp = /(#(?:\[\[)?.+?)\s/gm; //this is close, but not quite right, doesnt work for #[[something else]]
 	const result = input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line.replace(regexp, "");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 
 	const matches = [...result.matchAll(regexp)];
 	if (matches.length > 0) {
@@ -406,20 +412,20 @@ function removeHashtags(input: string) {
 
 function removeDoubleBraces(input: string) {
 	return input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line.replace(/\{\{([^\{\}]+)\}\}/gm, "$1");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 }
 
 function removeNamespaces(input: string): string {
 	const result = input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line.replace(/\[\[(.+?)\/(.+?)\]\]/gm, "[[$2]]");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 
 	const matches = [...result.matchAll(/\[\[(.+?)\/(.+?)\]\]/gm)];
 	if (matches.length > 0) {
@@ -430,25 +436,25 @@ function removeNamespaces(input: string): string {
 
 function removeBlocksWithQueries(input: string): string {
 	const result = input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.filter(function (line) {
 			return line.match(/\{\{query:.+?\}\}/gm) === null;
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 
 	return result;
 }
 
 function removeDoubleBrackets(input: string): string {
 	const result = input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line
 				.replace(/\[([^\[\]]+)\]\((\[\[|\(\()([^\[\]]+)(\]\]|\)\))\)/gm, "$1")
 				.replace(/\[\[([^\[\]]+)\]\]/gm, "$1")
 				.replace(/\(\(([^\(\)]+)\)\)/gm, "$1");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 
 	const matches = [
 		...result.matchAll(/\[([^\[\]]+)\]\((\[\[|\(\()([^\[\]]+)(\]\]|\)\))\)/gm),
@@ -463,12 +469,12 @@ function removeDoubleBrackets(input: string): string {
 
 function removeFormatting(input: string) {
 	return input
-		.split("\n")
+		.split(BLOCK_DELIMITER)
 		.map(function (line) {
 			return line
 				.replace(/\*\*(.+?)\*\*/gm, "$1")
 				.replace(/\_\_(.+?)\_\_/gm, "$1")
 				.replace(/\^\^(.+?)\^\^/gm, "$1");
 		})
-		.join("\n");
+		.join(BLOCK_DELIMITER);
 }

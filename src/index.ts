@@ -6,6 +6,8 @@ import { iterateThroughTree } from "./utils";
 
 const CONTEXT_MENU_COMMAND_LABEL = "Export Formatter";
 
+export const BLOCK_DELIMITER = String.fromCharCode(30); // record separator
+
 async function commandCallback(block: any) {
 	/*
     example block
