@@ -1,4 +1,5 @@
 import resolveRefs from "roamjs-components/dom/resolveRefs";
+import { BLOCK_DELIMITER } from "./index";
 
 export function getElementValue(selector: string): string | null {
 	const element = document.querySelector(selector) as any;
@@ -97,7 +98,20 @@ export async function iterateThroughTree(uid: string, flatten = false) {
 		) {
 			if (nodeCurrent?.title) return "";
 			const leadingSpaces = "\t".repeat(level);
-			return leadingSpaces + "- " + blockText + "\n";
+			return (
+				blockText
+					.split("\n")
+					.map(function (line, index) {
+						if (line.trim().length === 0) {
+							line = " ";
+						}
+						if (index === 0) {
+							return leadingSpaces + "- " + line;
+						}
+						return leadingSpaces + "  " + line;
+					})
+					.join("\n") + BLOCK_DELIMITER
+			);
 		},
 		null,
 		flatten
