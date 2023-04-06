@@ -298,6 +298,13 @@ function convertForMarkdown(input: string) {
 				return line.replace(/\s\s\s\s/gm, "&nbsp;&nbsp;&nbsp;&nbsp;");
 			}
 		})
+    .map(function (line) {
+      if (line.trim().startsWith("> ") || line.trim().startsWith("- > ")) {
+				return line + `\n`;
+			} else {
+				return line
+			}
+    })
 		.join("\n");
 }
 
