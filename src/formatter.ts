@@ -1,5 +1,7 @@
 const { Remarkable } = require("remarkable");
 
+const formatter_function_debugging = true;
+
 import { BLOCK_DELIMITER } from "./index";
 
 var md = new Remarkable({ breaks: true });
@@ -156,6 +158,7 @@ interface settings {
 	remove_double_braces: boolean;
 	remove_formatting: boolean;
 	add_line_breaks: number;
+	line_breaks_before_all_nodes: boolean;
 	remove_colon_from_attributes: boolean;
 	remove_quotes: boolean;
 	remove_hashtag_marks: boolean;
@@ -175,6 +178,7 @@ function getSettingsFromDom(): settings {
 			getElementValue("#rgef_remove_double_braces") === "true",
 		remove_formatting: getElementValue("#rgef_remove_formatting") === "true",
 		add_line_breaks: Number(getElementValue("#rgef_add_line_breaks")),
+		line_breaks_before_all_nodes: getElementValue("#rgef_line_breaks_before_all_nodes") === "true",
 		remove_colon_from_attributes:
 			getElementValue("#rgef_remove_colon_from_attributes") === "true",
 		remove_quotes: getElementValue("#rgef_remove_quotes") === "true",
@@ -194,7 +198,7 @@ export function render() {
 		settings.add_line_breaks = 0;
 	}
 
-	//console.log(settings);
+	console.log(settings);
 
 	const input = getElementValue("#rgef_input") ?? "";
 	let result = input;
@@ -203,8 +207,6 @@ export function render() {
 		result = ignoreParentNode(result);
 	}
 
-	result = addLineBreaksBeforeParagraphs(result, settings.add_line_breaks);
-
 	if (settings.flatten_indentation) {
 		result = flattenIndentation(result, settings.flatten_indentation);
 	}
@@ -212,6 +214,12 @@ export function render() {
 	if (settings.remove_bullets) {
 		result = removeBullets(result);
 	}
+
+  if (settings.line_breaks_before_all_nodes) {
+    result = addLineBreaksBeforeAllNodes(result, settings.add_line_breaks);
+  } else {
+    result = addLineBreaksBeforeParagraphs(result, settings.add_line_breaks);
+  }
 
 	if (settings.remove_double_braces) {
 		result = removeDoubleBraces(result);
@@ -264,7 +272,14 @@ export function render() {
 	}
 }
 
+function formatterFunctionDebug (debugData:Object) {
+  if (formatter_function_debugging) {
+    console.log(debugData);
+  }
+}
+
 function convertForMarkdown(input: string) {
+  formatterFunctionDebug({fn: `convertForMarkdown`, input})
 	return input
 		.split(BLOCK_DELIMITER)
 		.map(function (line) {
@@ -287,6 +302,7 @@ function convertForMarkdown(input: string) {
 }
 
 function convertTodoAndDone(input: string) {
+  formatterFunctionDebug({fn: `convertTodoAndDone`, input})
 	return input
 		.split(BLOCK_DELIMITER)
 		.map(function (line) {
@@ -296,6 +312,7 @@ function convertTodoAndDone(input: string) {
 }
 
 function removeTodos(input: string) {
+  formatterFunctionDebug({fn: `removeTodos`, input})
 	return input
 		.split(BLOCK_DELIMITER)
 		.map(function (line) {
@@ -310,6 +327,7 @@ function addLineBreaksBeforeParagraphs(
 	input: string,
 	numberOfLineBreaks: number
 ) {
+  formatterFunctionDebug({fn: `addLineBreaksBeforeParagraphs`, input, numberOfLineBreaks})
 	return input
 		.split(BLOCK_DELIMITER)
 		.map(function (line, index) {
@@ -322,7 +340,25 @@ function addLineBreaksBeforeParagraphs(
 		.join(BLOCK_DELIMITER);
 }
 
+function addLineBreaksBeforeAllNodes(
+	input: string,
+	numberOfLineBreaks: number
+) {
+  formatterFunctionDebug({fn: `addLineBreaksBeforeAllNodes`, input, numberOfLineBreaks})
+	return input
+		.split(BLOCK_DELIMITER)
+		.map(function (line, index) {
+			//dont add line breaks before the first node
+			if (index > 0 && numberOfLineBreaks > 0 ) {
+				return "\n".repeat(numberOfLineBreaks) + line;
+			}
+			return line;
+		})
+		.join(BLOCK_DELIMITER);
+}
+
 function ignoreParentNode(input: string) {
+  formatterFunctionDebug({fn: `ignoreParentNode`, input})
 	return flattenIndentation(
 		input.split(BLOCK_DELIMITER).slice(1).join(BLOCK_DELIMITER),
 		1
@@ -330,6 +366,7 @@ function ignoreParentNode(input: string) {
 }
 
 function flattenIndentation(input: string, flatten_indentation: number) {
+  formatterFunctionDebug({fn: `flattenIndentation`, input, flatten_indentation})
 	if (flatten_indentation > 5) {
 		return input
 			.split(BLOCK_DELIMITER)
@@ -352,6 +389,7 @@ function flattenIndentation(input: string, flatten_indentation: number) {
 }
 
 function removeBullets(input: string) {
+  formatterFunctionDebug({fn: `removeBullets`, input})
 	return input
 		.split(BLOCK_DELIMITER)
 		.map(function (line) {
@@ -361,6 +399,7 @@ function removeBullets(input: string) {
 }
 
 function removeColonFromAttributes(input: string) {
+  formatterFunctionDebug({fn: `removeColonFromAttributes`, input})
 	return input
 		.split(BLOCK_DELIMITER)
 		.map(function (line) {
@@ -370,6 +409,7 @@ function removeColonFromAttributes(input: string) {
 }
 
 function removeQuotes(input: string) {
+  formatterFunctionDebug({fn: `removeQuotes`, input})
 	return input
 		.split(BLOCK_DELIMITER)
 		.map(function (line) {
@@ -379,6 +419,7 @@ function removeQuotes(input: string) {
 }
 
 function removeHashtagMarks(input: string): string {
+  formatterFunctionDebug({fn: `removeHashtagMarks`, input})
 	const regexp = /\#(.+)\b/gm;
 	const result = input
 		.split(BLOCK_DELIMITER)
@@ -395,6 +436,7 @@ function removeHashtagMarks(input: string): string {
 }
 
 function removeHashtags(input: string) {
+  formatterFunctionDebug({fn: `removeHashtags`, input})
 	const regexp = /(#(?:\[\[)?.+?)\s/gm; //this is close, but not quite right, doesnt work for #[[something else]]
 	const result = input
 		.split(BLOCK_DELIMITER)
@@ -411,6 +453,7 @@ function removeHashtags(input: string) {
 }
 
 function removeDoubleBraces(input: string) {
+  formatterFunctionDebug({fn: `removeDoubleBraces`, input})
 	return input
 		.split(BLOCK_DELIMITER)
 		.map(function (line) {
@@ -420,6 +463,7 @@ function removeDoubleBraces(input: string) {
 }
 
 function removeNamespaces(input: string): string {
+  formatterFunctionDebug({fn: `removeNamespaces`, input})
 	const result = input
 		.split(BLOCK_DELIMITER)
 		.map(function (line) {
@@ -435,6 +479,7 @@ function removeNamespaces(input: string): string {
 }
 
 function removeBlocksWithQueries(input: string): string {
+  formatterFunctionDebug({fn: `removeBlocksWithQueries`, input})
 	const result = input
 		.split(BLOCK_DELIMITER)
 		.filter(function (line) {
@@ -446,6 +491,7 @@ function removeBlocksWithQueries(input: string): string {
 }
 
 function removeDoubleBrackets(input: string): string {
+  formatterFunctionDebug({fn: `removeDoubleBrackets`, input})
 	const result = input
 		.split(BLOCK_DELIMITER)
 		.map(function (line) {
@@ -468,6 +514,7 @@ function removeDoubleBrackets(input: string): string {
 }
 
 function removeFormatting(input: string) {
+  formatterFunctionDebug({fn: `removeFormatting`, input})
 	return input
 		.split(BLOCK_DELIMITER)
 		.map(function (line) {

@@ -102,7 +102,7 @@ const html = `
 			</div>
 			<div class="rgef_setting zero">
 			  <label class="rgef_toggle-on-click" title="adds an extra line break">
-				add line breaks before paragraphs?
+				add line breaks?
 				<select id="rgef_add_line_breaks" class="rgef_hidden-select-setting" data-default="0">
 				  <option value="0">Zero</option>
 				  <option value="1">One</option>
@@ -110,6 +110,15 @@ const html = `
 				</select>
 			  </label>
 			</div>
+<!--			<div class="rgef_setting">-->
+<!--			  <label class="rgef_toggle-on-click" title="Line breaks before all nodes?">-->
+<!--				line breaks before...-->
+<!--				<select id="rgef_line_breaks_before_all_nodes" class="rgef_hidden-select-setting" data-default="false">-->
+<!--				  <option value="false">only paragraphs</option>-->
+<!--				  <option value="true">all nodes</option>-->
+<!--				</select>-->
+<!--			  </label>-->
+<!--			</div>-->
 			<div class="rgef_setting">
 			  <label class="rgef_toggle-on-click" title="turns attributes:: into attributes:">
 				remove extra colon from attributes::?
