@@ -1,0 +1,189 @@
+{
+  "cases": [
+    {
+      "name": "inline formatting and markdown link conversion",
+      "lines": [
+        "**Bold** *Italic* ~~Strike~~ [Docs](https://example.com/docs)"
+      ],
+      "expect": {
+        "standard": [
+          "**Bold** *Italic* ~~Strike~~ [Docs](https://example.com/docs)"
+        ],
+        "slack": [
+          "*Bold* _Italic_ ~Strike~ <https://example.com/docs|Docs>"
+        ],
+        "word": [
+          "**Bold** *Italic* ~~Strike~~ [Docs](https://example.com/docs)"
+        ],
+        "notion": [
+          "**Bold** *Italic* ~~Strike~~ [Docs](https://example.com/docs)"
+        ],
+        "whatsapp": [
+          "*Bold* _Italic_ ~Strike~ Docs (https://example.com/docs)"
+        ],
+        "telegram": [
+          "**Bold** __Italic__ ~~Strike~~ Docs (https://example.com/docs)"
+        ],
+        "signal": [
+          "Bold Italic Strike Docs (https://example.com/docs)"
+        ],
+        "imessage": [
+          "Bold Italic Strike Docs (https://example.com/docs)"
+        ],
+        "messaging": [
+          "*Bold* *Italic* ~Strike~ Docs (https://example.com/docs)"
+        ],
+        "latex": [
+          "**Bold** *Italic* ~~Strike~~ Docs (\\url{https://example.com/docs})"
+        ]
+      }
+    },
+    {
+      "name": "quote bullet normalization and fenced code preservation",
+      "lines": [
+        "- > **Quoted** and `code`",
+        "```",
+        "**inside** [Keep](https://k.com)",
+        "```"
+      ],
+      "expect": {
+        "standard": [
+          "- > **Quoted** and `code`",
+          "```",
+          "**inside** [Keep](https://k.com)",
+          "```"
+        ],
+        "slack": [
+          "> *Quoted* and `code`",
+          "```",
+          "**inside** [Keep](https://k.com)",
+          "```"
+        ],
+        "word": [
+          "> **Quoted** and `code`",
+          "```",
+          "**inside** [Keep](https://k.com)",
+          "```"
+        ],
+        "notion": [
+          "> **Quoted** and `code`",
+          "```",
+          "**inside** [Keep](https://k.com)",
+          "```"
+        ],
+        "whatsapp": [
+          "> *Quoted* and `code`",
+          "```",
+          "**inside** [Keep](https://k.com)",
+          "```"
+        ],
+        "telegram": [
+          "> **Quoted** and `code`",
+          "```",
+          "**inside** [Keep](https://k.com)",
+          "```"
+        ],
+        "signal": [
+          "- > Quoted and `code`",
+          "```",
+          "**inside** [Keep](https://k.com)",
+          "```"
+        ],
+        "imessage": [
+          "- > Quoted and `code`",
+          "```",
+          "**inside** [Keep](https://k.com)",
+          "```"
+        ],
+        "messaging": [
+          "- > *Quoted* and `code`",
+          "```",
+          "**inside** [Keep](https://k.com)",
+          "```"
+        ],
+        "latex": [
+          "> **Quoted** and `code`",
+          "```",
+          "**inside** [Keep](https://k.com)",
+          "```"
+        ]
+      }
+    },
+    {
+      "name": "parenthesized links and slack label fallback",
+      "lines": [
+        "[A|B](https://example.com/a_(b)) and [Plain](https://example.com)"
+      ],
+      "expect": {
+        "standard": [
+          "[A|B](https://example.com/a_(b)) and [Plain](https://example.com)"
+        ],
+        "slack": [
+          "A|B (https://example.com/a_(b)) and <https://example.com|Plain>"
+        ],
+        "word": [
+          "[A|B](https://example.com/a_(b)) and [Plain](https://example.com)"
+        ],
+        "notion": [
+          "[A|B](https://example.com/a_(b)) and [Plain](https://example.com)"
+        ],
+        "whatsapp": [
+          "A|B (https://example.com/a_(b)) and Plain (https://example.com)"
+        ],
+        "telegram": [
+          "A|B (https://example.com/a_(b)) and Plain (https://example.com)"
+        ],
+        "signal": [
+          "A|B (https://example.com/a_(b)) and Plain (https://example.com)"
+        ],
+        "imessage": [
+          "A|B (https://example.com/a_(b)) and Plain (https://example.com)"
+        ],
+        "messaging": [
+          "A|B (https://example.com/a_(b)) and Plain (https://example.com)"
+        ],
+        "latex": [
+          "A|B (\\url{https://example.com/a_(b)}) and Plain (\\url{https://example.com})"
+        ]
+      }
+    },
+    {
+      "name": "inline code remains literal for plain-text targets",
+      "lines": [
+        "Here is `**literal**` and **bold**."
+      ],
+      "expect": {
+        "standard": [
+          "Here is `**literal**` and **bold**."
+        ],
+        "slack": [
+          "Here is `**literal**` and *bold*."
+        ],
+        "word": [
+          "Here is `**literal**` and **bold**."
+        ],
+        "notion": [
+          "Here is `**literal**` and **bold**."
+        ],
+        "whatsapp": [
+          "Here is `**literal**` and *bold*."
+        ],
+        "telegram": [
+          "Here is `**literal**` and **bold**."
+        ],
+        "signal": [
+          "Here is `**literal**` and bold."
+        ],
+        "imessage": [
+          "Here is `**literal**` and bold."
+        ],
+        "messaging": [
+          "Here is `**literal**` and *bold*."
+        ],
+        "latex": [
+          "Here is `**literal**` and **bold**."
+        ]
+      }
+    }
+  ]
+}

@@ -1,6 +1,22 @@
 import resolveRefs from "roamjs-components/dom/resolveRefs";
 import { BLOCK_DELIMITER } from "./index";
 
+function normalizeResolvedAliasLinks(input: string) {
+	return input.replace(
+		/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gm,
+		function (_match, aliasLabel: string, url: string) {
+			if (
+				url.includes("/page/") ||
+				url.includes("/#/app/") ||
+				url.includes("roamresearch.com")
+			) {
+				return aliasLabel;
+			}
+			return _match;
+		}
+	);
+}
+
 export function getElementValue(selector: string): string | null {
 	const element = document.querySelector(selector) as any;
 	if (element) {
@@ -94,10 +110,16 @@ export async function iterateThroughTree(uid: string, flatten = false) {
 		async function pureText_TabIndented(
 			blockText: string,
 			nodeCurrent: BlockInfo,
-			level = 0
+			level = 0,
+			parent: BlockInfo | null = null
 		) {
 			if (nodeCurrent?.title) return "";
 			const leadingSpaces = "\t".repeat(level);
+			const marker =
+				parent?.["view-type"] === "numbered"
+					? `${(nodeCurrent?.order ?? 0) + 1}. `
+					: "- ";
+			const continuationPrefix = " ".repeat(marker.length);
 			return (
 				blockText
 					.split("\n")
@@ -106,9 +128,9 @@ export async function iterateThroughTree(uid: string, flatten = false) {
 							line = " ";
 						}
 						if (index === 0) {
-							return leadingSpaces + "- " + line;
+							return leadingSpaces + marker + line;
 						}
-						return leadingSpaces + "  " + line;
+						return leadingSpaces + continuationPrefix + line;
 					})
 					.join("\n") + BLOCK_DELIMITER
 			);
@@ -168,7 +190,7 @@ async function walkDocumentStructureAndFormat(
 						{ text: blockText, offset: 0 }
 					);
 					return outputFunction(
-						resolveRefs(text),
+						normalizeResolvedAliasLinks(resolveRefs(text)),
 						nodeCurrent,
 						level,
 						parent,
