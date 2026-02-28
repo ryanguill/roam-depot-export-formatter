@@ -41,7 +41,13 @@ function expectEqual(name, actual, expected) {
 	}
 }
 
-function main() {
+function expect(name, condition) {
+	if (!condition) {
+		fail(name);
+	}
+}
+
+async function main() {
 	fs.rmSync(tempOutDir, { recursive: true, force: true });
 
 	run("npx", [
@@ -66,11 +72,11 @@ function main() {
 
 	const {
 		blocksToMarkdown,
+		exportWithReferencesToClipboard,
 		formatBacklinksSection,
 		formatReferencesExport,
 		getBacklinksSectionMarkdown,
-	} =
-		loadCompiledModule("referencesExport.js");
+	} = loadCompiledModule("referencesExport.js");
 
 	const blockMarkdown = blocksToMarkdown([
 		{
@@ -146,77 +152,279 @@ function main() {
 	);
 
 	const previousWindow = global.window;
-	global.window = {
-		location: { hash: "#/app/test-graph/page/example" },
-		roamAlphaAPI: {
-			pull: (pattern, reference) => {
-				const uid = Array.isArray(reference) ? reference[1] : "";
-				const blockDataByUid = {
-					BLINK0001: {
-						string:
-							"{{[[TODO]]}} ((INNER0001))",
-						order: 0,
-						children: [],
-					},
-					INNER0001: {
-						string:
-							"Allow filter to also target TODO that are a block reference, ((DEEP00001))",
-						order: 0,
-						children: [],
-					},
-					DEEP00001: {
-						string:
-							"when excluding them from a page.",
-						order: 0,
-						children: [],
-					},
-					TARGET001: {
-						string: "target",
-						order: 0,
-						children: [],
-					},
-				};
+	const previousNavigator = global.navigator;
+	const previousDocument = global.document;
+	try {
+		global.window = {
+			location: { hash: "#/app/test-graph/page/example" },
+			roamAlphaAPI: {
+				pull: (pattern, reference) => {
+					const uid = Array.isArray(reference) ? reference[1] : "";
+					const blockDataByUid = {
+						BLINK0001: {
+							string: "{{[[TODO]]}} ((INNER0001))",
+							order: 0,
+							children: [],
+						},
+						INNER0001: {
+							string:
+								"Allow filter to also target TODO that are a block reference, ((DEEP00001))",
+							order: 0,
+							children: [],
+						},
+						DEEP00001: {
+							string: "when excluding them from a page.",
+							order: 0,
+							children: [],
+						},
+						TARGET001: {
+							string: "target",
+							order: 0,
+							children: [],
+						},
+					};
 
-				if (pattern === "[:block/string]") {
-					const blockData = blockDataByUid[uid];
-					return blockData ? { ":block/string": blockData.string } : null;
-				}
+					if (pattern === "[:block/string]") {
+						const blockData = blockDataByUid[uid];
+						return blockData ? { ":block/string": blockData.string } : null;
+					}
 
-				if (String(pattern).includes(":node/title :block/string")) {
-					return { ":block/string": "target" };
-				}
+					if (String(pattern).includes(":node/title :block/string")) {
+						return { ":block/string": "target" };
+					}
 
-				if (
-					String(pattern).includes(
-						":block/string :block/uid :block/order"
-					)
-				) {
-					const blockData = blockDataByUid[uid];
-					if (!blockData) {
+					if (
+						String(pattern).includes(":block/string :block/uid :block/order")
+					) {
+						const blockData = blockDataByUid[uid];
+						if (!blockData) {
+							return null;
+						}
+						return {
+							":block/string": blockData.string,
+							":block/uid": uid,
+							":block/order": blockData.order,
+							":block/children": [],
+						};
+					}
+
+					return null;
+				},
+				q: () => [["BLINK0001", "Josh Brown", "PAGE00001"]],
+			},
+		};
+
+		const resolvedBacklinks = getBacklinksSectionMarkdown("TARGET001");
+		expectEqual(
+			"getBacklinksSectionMarkdown should resolve nested block refs and normalize TODO markers",
+			resolvedBacklinks.section,
+			"## Backlinks\n\n### [[Josh Brown]]\n\n- [ ] Allow filter to also target TODO that are a block reference, when excluding them from a page.\n"
+		);
+
+		let qTargetUid = "";
+		global.window = {
+			roamAlphaAPI: {
+				pull: (pattern, reference) => {
+					const uid = Array.isArray(reference) ? reference[1] : "";
+
+					if (String(pattern).includes(":node/title :block/uid {:block/page")) {
+						if (uid === "BLOCK_A") {
+							return { ":block/page": { ":block/uid": "PAGE_A" } };
+						}
 						return null;
 					}
-					return {
-						":block/string": blockData.string,
-						":block/uid": uid,
-						":block/order": blockData.order,
-						":block/children": [],
-					};
-				}
 
-				return null;
+					if (
+						String(pattern).includes(":block/string :block/uid :block/order")
+					) {
+						if (uid === "BETA001") {
+							return {
+								":block/string": "zeta block",
+								":block/uid": uid,
+								":block/order": 5,
+								":block/children": [],
+							};
+						}
+						if (uid === "ALPHA001") {
+							return {
+								":block/string": "alpha second",
+								":block/uid": uid,
+								":block/order": 2,
+								":block/children": [],
+							};
+						}
+						if (uid === "ALPHA000") {
+							return {
+								":block/string": "alpha first",
+								":block/uid": uid,
+								":block/order": 0,
+								":block/children": [],
+							};
+						}
+					}
+
+					return null;
+				},
+				q: (_query, targetUid) => {
+					qTargetUid = targetUid;
+					return [
+						["BETA001", "zeta page", "PAGE_Z"],
+						["ALPHA001", "Alpha Page", "PAGE_A"],
+						["ALPHA001", "Alpha Page", "PAGE_A"],
+						["ALPHA000", "Alpha Page", "PAGE_A"],
+					];
+				},
 			},
-			q: () => [["BLINK0001", "Josh Brown", "PAGE00001"]],
-		},
-	};
+		};
 
-	const resolvedBacklinks = getBacklinksSectionMarkdown("TARGET001");
-	expectEqual(
-		"getBacklinksSectionMarkdown should resolve nested block refs and normalize TODO markers",
-		resolvedBacklinks.section,
-		"## Backlinks\n\n### [[Josh Brown]]\n\n- [ ] Allow filter to also target TODO that are a block reference, when excluding them from a page.\n"
-	);
+		const forcedPageBacklinks = getBacklinksSectionMarkdown("BLOCK_A", {
+			forcePage: true,
+		});
+		expectEqual(
+			"getBacklinksSectionMarkdown should resolve to page uid and sort grouped backlinks",
+			forcedPageBacklinks.section,
+			"## Backlinks\n\n### [[Alpha Page]]\n\n- alpha first\n- alpha second\n\n### [[zeta page]]\n\n- zeta block\n"
+		);
+		expectEqual(
+			"getBacklinksSectionMarkdown should query backlinks with resolved page uid",
+			qTargetUid,
+			"PAGE_A"
+		);
 
-	global.window = previousWindow;
+		let clipboardText = "";
+		if (!global.navigator) {
+			global.navigator = {};
+		}
+		global.navigator.clipboard = {
+			writeText: async (text) => {
+				clipboardText = text;
+			},
+		};
+		global.window = {
+			roamAlphaAPI: {
+				pull: (pattern, reference) => {
+					const uid = Array.isArray(reference) ? reference[1] : "";
+					if (String(pattern).includes(":node/title :block/string")) {
+						if (uid === "PAGE001") {
+							return {
+								":node/title": "Page One",
+								":block/string": "",
+							};
+						}
+						return { ":block/string": "Task root" };
+					}
+
+					if (String(pattern).includes(":node/title :block/uid {:block/page")) {
+						if (uid === "BLOCK001") {
+							return { ":block/page": { ":block/uid": "PAGE001" } };
+						}
+						return null;
+					}
+
+					if (
+						String(pattern).includes("[:node/title :block/uid") &&
+						String(pattern).includes(":block/children")
+					) {
+						if (uid === "PAGE001") {
+							return {
+								":node/title": "Page One",
+								":block/uid": uid,
+								":block/children": [
+									{
+										":block/string": "page child",
+										":block/uid": "PAGECHILD",
+										":block/order": 0,
+										":block/children": [],
+									},
+								],
+							};
+						}
+						return null;
+					}
+
+					if (
+						String(pattern).includes(":block/string :block/uid :block/order")
+					) {
+						if (uid === "BLOCK001") {
+							return {
+								":block/string": "Task root",
+								":block/uid": uid,
+								":block/order": 0,
+								":block/children": [],
+							};
+						}
+						if (uid === "BLREF001") {
+							return {
+								":block/string": "reference from elsewhere",
+								":block/uid": uid,
+								":block/order": 1,
+								":block/children": [],
+							};
+						}
+					}
+
+					return null;
+				},
+				q: () => [["BLREF001", "Other Page", "PAGE999"]],
+			},
+		};
+
+		const blockExport = await exportWithReferencesToClipboard("BLOCK001", {
+			transformMarkdown: (markdownInput) => `PREFIX\n${markdownInput}`,
+		});
+		expect(
+			"exportWithReferencesToClipboard should succeed for blocks",
+			blockExport.success
+		);
+		expectEqual(
+			"exportWithReferencesToClipboard should use transformed markdown",
+			blockExport.markdown,
+			"PREFIX\n# Task root\n\n- Task root\n\n## Backlinks\n\n### [[Other Page]]\n\n- reference from elsewhere\n"
+		);
+		expectEqual(
+			"exportWithReferencesToClipboard should copy transformed markdown",
+			clipboardText,
+			blockExport.markdown
+		);
+
+		clipboardText = "";
+		const pageExport = await exportWithReferencesToClipboard("BLOCK001", {
+			forcePage: true,
+		});
+		expect(
+			"exportWithReferencesToClipboard should succeed for pages",
+			pageExport.success
+		);
+		expectEqual(
+			"exportWithReferencesToClipboard should export page children when forcePage is enabled",
+			pageExport.markdown,
+			"# Page One\n\n- page child\n\n## Backlinks\n\n### [[Other Page]]\n\n- reference from elsewhere\n"
+		);
+		expectEqual(
+			"exportWithReferencesToClipboard should copy page markdown",
+			clipboardText,
+			pageExport.markdown
+		);
+
+		global.window = {};
+		const unavailableBacklinks = getBacklinksSectionMarkdown("BLOCK001");
+		expectEqual(
+			"getBacklinksSectionMarkdown should fail when Roam API is unavailable",
+			unavailableBacklinks.error,
+			"Roam API is unavailable."
+		);
+
+		const unavailableExport = await exportWithReferencesToClipboard("BLOCK001");
+		expectEqual(
+			"exportWithReferencesToClipboard should fail when Roam API is unavailable",
+			unavailableExport.error,
+			"Roam API is unavailable."
+		);
+	} finally {
+		global.window = previousWindow;
+		global.navigator = previousNavigator;
+		global.document = previousDocument;
+	}
 
 	const markdownWithoutBacklinks = formatReferencesExport({
 		title: "No Backlinks",
@@ -233,4 +441,6 @@ function main() {
 	console.log("[references-tests] All tests passed.");
 }
 
-main();
+main().catch((error) => {
+	fail(`Unexpected test runner error: ${String(error)}`);
+});
