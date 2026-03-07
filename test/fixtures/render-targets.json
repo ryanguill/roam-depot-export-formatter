@@ -184,6 +184,123 @@
           "Here is `**literal**` and **bold**."
         ]
       }
+    },
+    {
+      "name": "messaging targets normalize 4+ backtick code fences to triple backticks",
+      "lines": [
+        "`````markdown",
+        "FFood",
+        "`````",
+        "````markdown",
+        "Food",
+        "````"
+      ],
+      "expect": {
+        "standard": [
+          "`````markdown",
+          "FFood",
+          "`````",
+          "````markdown",
+          "Food",
+          "````"
+        ],
+        "slack": [
+          "```markdown",
+          "FFood",
+          "```",
+          "```markdown",
+          "Food",
+          "```"
+        ],
+        "word": [
+          "`````markdown",
+          "FFood",
+          "`````",
+          "````markdown",
+          "Food",
+          "````"
+        ],
+        "notion": [
+          "`````markdown",
+          "FFood",
+          "`````",
+          "````markdown",
+          "Food",
+          "````"
+        ],
+        "whatsapp": [
+          "```markdown",
+          "FFood",
+          "```",
+          "```markdown",
+          "Food",
+          "```"
+        ],
+        "telegram": [
+          "```markdown",
+          "FFood",
+          "```",
+          "```markdown",
+          "Food",
+          "```"
+        ],
+        "signal": [
+          "```markdown",
+          "FFood",
+          "```",
+          "```markdown",
+          "Food",
+          "```"
+        ],
+        "imessage": [
+          "`````markdown",
+          "FFood",
+          "`````",
+          "````markdown",
+          "Food",
+          "````"
+        ],
+        "excel": [
+          "`````markdown",
+          "FFood",
+          "`````",
+          "````markdown",
+          "Food",
+          "````"
+        ],
+        "google_sheets": [
+          "`````markdown",
+          "FFood",
+          "`````",
+          "````markdown",
+          "Food",
+          "````"
+        ],
+        "terminal": [
+          "`````markdown",
+          "FFood",
+          "`````",
+          "````markdown",
+          "Food",
+          "````"
+        ],
+        "messaging": [
+          "```markdown",
+          "FFood",
+          "```",
+          "```markdown",
+          "Food",
+          "```"
+        ],
+        "latex": [
+          "`````markdown",
+          "FFood",
+          "`````",
+          "````markdown",
+          "Food",
+          "````"
+        ]
+      }
     }
   ]
 }

@@ -34,6 +34,25 @@ const html = `
 				<span class="bp3-control-indicator"></span>
 			  </label>
 			</div>
+			<div class="rgef_setting">
+			  <label
+				class="bp3-control bp3-switch bp3-align-right"
+				title="adds backlinks section grouped by source page"
+			  >
+				Backlinks
+				<input type="checkbox" id="rgef_include_backlinks" data-default="false" />
+				<span class="bp3-control-indicator"></span>
+			  </label>
+			</div>
+			<div class="rgef_setting rgef_setting--select">
+			  <label title="which references to include when backlinks are enabled">Backlinks scope</label>
+			  <span class="bp3-html-select bp3-small">
+				<select id="rgef_backlinks_scope" data-default="target">
+				  <option value="target">Block/page</option>
+				  <option value="page">Page</option>
+				</select>
+			  </span>
+			</div>
 			<div class="rgef_setting rgef_setting--select">
 			  <label title="removes indentation at the beginning of lines">Indentation</label>
 			  <span class="bp3-html-select bp3-small">
@@ -124,7 +143,7 @@ const html = `
 			  </span>
 			</div>
 			<div class="rgef_setting rgef_setting--select">
-			  <label title="Where extra line breaks are inserted">Breaks apply to</label>
+			  <label title="Where extra line breaks are inserted">Breaks apply</label>
 			  <span class="bp3-html-select bp3-small">
 				<select id="rgef_line_breaks_before_all_nodes" data-default="false">
 				  <option value="false">Paragraphs</option>
@@ -133,7 +152,7 @@ const html = `
 			  </span>
 			</div>
 			<div id="rgef_paragraph_breaks_hint" class="rgef_setting-hint">
-				Tip: paragraph spacing only works when removing the parent node.
+				Paragraph spacing only works when removing the parent node
 			</div>
 			<div class="rgef_setting">
 			  <label class="bp3-control bp3-switch bp3-align-right" title="turns attributes:: into attributes:">

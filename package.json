@@ -7,7 +7,8 @@
     "prebuild:roam": "npm install",
     "build:roam": "roamjs-scripts build --depot",
     "dev": "roamjs-scripts dev --depot",
-    "test:targets": "node test/run-render-target-fixtures.cjs"
+    "test:targets": "node test/run-render-target-fixtures.cjs",
+    "test:references": "node test/run-references-export.cjs"
   },
   "keywords": [
     "roamresearch"

@@ -279,6 +279,38 @@ function main() {
 	formatterCaseCount += 1;
 
 	assertFormatterOutput({
+		name: "remove_todos should also strip markdown checkbox markers.",
+		inputLines: ["- [ ] Keep content", "- [x]", "\t- [ ] Nested keep"],
+		expectedLines: ["- Keep content", "\t- Nested keep"],
+		settings: {
+			...makeDefaultFormatterSettings(),
+			remove_todos: true,
+		},
+		applyFormatterSettings,
+		BLOCK_DELIMITER,
+	});
+	formatterCaseCount += 1;
+
+	assertFormatterOutput({
+		name: "remove_todos should not strip plain-text TODO/DONE words in sentences.",
+		inputLines: [
+			"- Allow filter to also target TODO that are a block reference",
+			"- This plain text mentions DONE in a sentence",
+		],
+		expectedLines: [
+			"- Allow filter to also target TODO that are a block reference",
+			"- This plain text mentions DONE in a sentence",
+		],
+		settings: {
+			...makeDefaultFormatterSettings(),
+			remove_todos: true,
+		},
+		applyFormatterSettings,
+		BLOCK_DELIMITER,
+	});
+	formatterCaseCount += 1;
+
+	assertFormatterOutput({
 		name: "Query blocks should be removed before brace cleanup runs.",
 		inputLines: [
 			"- keep this",
@@ -333,6 +365,27 @@ function main() {
 			"- use `inline` code",
 			"- keep after",
 		],
+		settings: {
+			...makeDefaultFormatterSettings(),
+			remove_code_blocks: true,
+		},
+		applyFormatterSettings,
+		BLOCK_DELIMITER,
+	});
+	formatterCaseCount += 1;
+
+	assertFormatterOutput({
+		name: "Code block removal should support 4+ backtick fences without leaving stray ticks.",
+		inputLines: [
+			"- keep before",
+			"- `````markdown",
+			"  FFood`````",
+			"- ````markdown",
+			"  Food````",
+			"- `````code````` after",
+			"- keep after",
+		],
+		expectedLines: ["- keep before", "- after", "- keep after"],
 		settings: {
 			...makeDefaultFormatterSettings(),
 			remove_code_blocks: true,

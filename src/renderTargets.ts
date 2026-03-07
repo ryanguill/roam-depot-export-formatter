@@ -99,27 +99,146 @@ function mapLines(input: string, transformer: (line: string) => string): string 
 		.join(BLOCK_DELIMITER);
 }
 
-function mapLinesOutsideCodeFences(
-	input: string,
-	transformer: (line: string) => string
+type FenceChar = "`" | "~";
+type FenceState = {
+	inFence: boolean;
+	fenceChar: FenceChar | "";
+	fenceLength: number;
+};
+type FenceMapOptions = {
+	normalizeBacktickFenceRunsToTriple?: boolean;
+};
+
+function findFenceRunLength(
+	line: string,
+	start: number,
+	fenceChar: FenceChar
+): number {
+	let index = start;
+	while (index < line.length && line[index] === fenceChar) {
+		index++;
+	}
+	return index - start;
+}
+
+function findNextFenceStart(line: string, start: number): number {
+	for (let i = start; i < line.length; i++) {
+		const char = line[i];
+		if (char !== "`" && char !== "~") {
+			continue;
+		}
+		if (findFenceRunLength(line, i, char as FenceChar) >= 3) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+function findClosingFenceStart(
+	line: string,
+	start: number,
+	fenceChar: FenceChar,
+	minFenceLength: number
+): number {
+	for (let i = start; i < line.length; i++) {
+		if (line[i] !== fenceChar) {
+			continue;
+		}
+		if (findFenceRunLength(line, i, fenceChar) >= minFenceLength) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+function normalizeFenceRun(
+	fenceChar: FenceChar,
+	fenceLength: number,
+	options: FenceMapOptions
 ): string {
-	const lines = input.split(BLOCK_DELIMITER);
-	const outputLines: string[] = [];
-	let inCodeFence = false;
+	if (options.normalizeBacktickFenceRunsToTriple && fenceChar === "`") {
+		return "```";
+	}
+	return fenceChar.repeat(fenceLength);
+}
 
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i];
-		const fenceCount = (line.match(/```/g) ?? []).length;
+function mapLineOutsideCodeFences(
+	line: string,
+	state: FenceState,
+	transformer: (line: string) => string,
+	options: FenceMapOptions
+): string {
+	let output = "";
+	let cursor = 0;
 
-		if (inCodeFence || fenceCount > 0) {
-			outputLines.push(line);
-			if (fenceCount % 2 === 1) {
-				inCodeFence = !inCodeFence;
+	while (cursor < line.length) {
+		if (!state.inFence) {
+			const fenceStart = findNextFenceStart(line, cursor);
+			if (fenceStart < 0) {
+				output += transformer(line.slice(cursor));
+				break;
 			}
+
+			output += transformer(line.slice(cursor, fenceStart));
+			const fenceChar = line[fenceStart] as FenceChar;
+			const fenceLength = findFenceRunLength(line, fenceStart, fenceChar);
+			output += normalizeFenceRun(fenceChar, fenceLength, options);
+			state.inFence = true;
+			state.fenceChar = fenceChar;
+			state.fenceLength = fenceLength;
+			cursor = fenceStart + fenceLength;
 			continue;
 		}
 
-		outputLines.push(transformer(line));
+		const closingFenceStart = findClosingFenceStart(
+			line,
+			cursor,
+			state.fenceChar as FenceChar,
+			state.fenceLength
+		);
+		if (closingFenceStart < 0) {
+			output += line.slice(cursor);
+			break;
+		}
+
+		output += line.slice(cursor, closingFenceStart);
+		const closingFenceLength = findFenceRunLength(
+			line,
+			closingFenceStart,
+			state.fenceChar as FenceChar
+		);
+		output += normalizeFenceRun(
+			state.fenceChar as FenceChar,
+			closingFenceLength,
+			options
+		);
+		state.inFence = false;
+		state.fenceChar = "";
+		state.fenceLength = 0;
+		cursor = closingFenceStart + closingFenceLength;
+	}
+
+	return output;
+}
+
+function mapLinesOutsideCodeFences(
+	input: string,
+	transformer: (line: string) => string,
+	options: FenceMapOptions = {}
+): string {
+	const lines = input.split(BLOCK_DELIMITER);
+	const outputLines: string[] = [];
+	const fenceState: FenceState = {
+		inFence: false,
+		fenceChar: "",
+		fenceLength: 0,
+	};
+
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		outputLines.push(
+			mapLineOutsideCodeFences(line, fenceState, transformer, options)
+		);
 	}
 
 	return outputLines.join(BLOCK_DELIMITER);
@@ -231,38 +350,27 @@ function convertMarkdownInlineForTelegram(segment: string): string {
 }
 
 function applySlackProfile(input: string): string {
-	const lines = input.split(BLOCK_DELIMITER);
-	const outputLines: string[] = [];
-	let inCodeFence = false;
-
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i];
-		const fenceCount = (line.match(/```/g) ?? []).length;
-
-		if (inCodeFence || fenceCount > 0) {
-			outputLines.push(line);
-			if (fenceCount % 2 === 1) {
-				inCodeFence = !inCodeFence;
-			}
-			continue;
-		}
-
-		const normalizedLine = normalizeQuotePrefixForSlack(line);
-		outputLines.push(
-			mapNonInlineCodeSegments(normalizedLine, convertMarkdownInlineForSlack)
-		);
-	}
-
-	return outputLines.join(BLOCK_DELIMITER);
+	return mapLinesOutsideCodeFences(
+		input,
+		(line) =>
+			mapNonInlineCodeSegments(
+				normalizeQuotePrefixForSlack(line),
+				convertMarkdownInlineForSlack
+			),
+		{ normalizeBacktickFenceRunsToTriple: true }
+	);
 }
 
 function applyMessagingFamilyProfile(input: string): string {
-	return mapLinesOutsideCodeFences(input, (line) =>
-		mapNonInlineCodeSegments(line, (segment) =>
-			normalizeMarkdownLinksForMessaging(segment)
-				.replace(/\*\*(.+?)\*\*/g, "*$1*")
-				.replace(/~~(.+?)~~/g, "~$1~")
-		)
+	return mapLinesOutsideCodeFences(
+		input,
+		(line) =>
+			mapNonInlineCodeSegments(line, (segment) =>
+				normalizeMarkdownLinksForMessaging(segment)
+					.replace(/\*\*(.+?)\*\*/g, "*$1*")
+					.replace(/~~(.+?)~~/g, "~$1~")
+			),
+		{ normalizeBacktickFenceRunsToTriple: true }
 	);
 }
 
@@ -300,66 +408,50 @@ function normalizeMarkdownLinksForPlainTextMessaging(segment: string): string {
 	);
 }
 
-function applyPlainTextMessagingProfile(input: string): string {
-	return mapLinesOutsideCodeFences(input, (line) =>
-		mapNonInlineCodeSegments(line, (segment) =>
-			stripUnsupportedMarkdownWrappersForPlainText(
-				normalizeMarkdownLinksForPlainTextMessaging(segment)
-			)
-		)
+function applyPlainTextMessagingProfile(
+	input: string,
+	options: FenceMapOptions = {}
+): string {
+	return mapLinesOutsideCodeFences(
+		input,
+		(line) =>
+			mapNonInlineCodeSegments(line, (segment) =>
+				stripUnsupportedMarkdownWrappersForPlainText(
+					normalizeMarkdownLinksForPlainTextMessaging(segment)
+				)
+			),
+		options
 	);
 }
 
 function applyWhatsAppProfile(input: string): string {
-	const lines = input.split(BLOCK_DELIMITER);
-	const outputLines: string[] = [];
-	let inCodeFence = false;
-
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i];
-		const fenceCount = (line.match(/```/g) ?? []).length;
-
-		if (inCodeFence || fenceCount > 0) {
-			outputLines.push(line);
-			if (fenceCount % 2 === 1) {
-				inCodeFence = !inCodeFence;
-			}
-			continue;
-		}
-
-		const normalizedLine = normalizeQuotePrefixForWhatsApp(line);
-		outputLines.push(
-			mapNonInlineCodeSegments(normalizedLine, convertMarkdownInlineForWhatsApp)
-		);
-	}
-
-	return outputLines.join(BLOCK_DELIMITER);
+	return mapLinesOutsideCodeFences(
+		input,
+		(line) =>
+			mapNonInlineCodeSegments(
+				normalizeQuotePrefixForWhatsApp(line),
+				convertMarkdownInlineForWhatsApp
+			),
+		{ normalizeBacktickFenceRunsToTriple: true }
+	);
 }
 
 function applyTelegramProfile(input: string): string {
-	const lines = input.split(BLOCK_DELIMITER);
-	const outputLines: string[] = [];
-	let inCodeFence = false;
+	return mapLinesOutsideCodeFences(
+		input,
+		(line) =>
+			mapNonInlineCodeSegments(
+				normalizeQuotePrefixForTelegram(line),
+				convertMarkdownInlineForTelegram
+			),
+		{ normalizeBacktickFenceRunsToTriple: true }
+	);
+}
 
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i];
-		const fenceCount = (line.match(/```/g) ?? []).length;
-
-		if (inCodeFence || fenceCount > 0) {
-			outputLines.push(line);
-			if (fenceCount % 2 === 1) {
-				inCodeFence = !inCodeFence;
-			}
-			continue;
-		}
-
-		const normalizedLine = normalizeQuotePrefixForTelegram(line);
-		outputLines.push(
-			mapNonInlineCodeSegments(normalizedLine, convertMarkdownInlineForTelegram)
-		);
-	}
-
-	return outputLines.join(BLOCK_DELIMITER);
+function applySignalProfile(input: string): string {
+	return applyPlainTextMessagingProfile(input, {
+		normalizeBacktickFenceRunsToTriple: true,
+	});
 }
 
 function applyWordOrNotionProfile(input: string): string {
@@ -402,7 +494,7 @@ export function applyRenderTargetProfile(
 		case "messaging":
 			return applyMessagingFamilyProfile(input);
 		case "signal":
-			return applyPlainTextMessagingProfile(input);
+			return applySignalProfile(input);
 		case "imessage":
 			return applyPlainTextMessagingProfile(input);
 		case "excel":

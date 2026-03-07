@@ -51,29 +51,31 @@ interface uiSettings {
 	enable_rendered_preview: boolean;
 	render_target_group: RenderTargetGroup;
 	render_target: RenderTarget;
+	include_backlinks: boolean;
+	backlinks_scope: "target" | "page";
 }
 
 const RENDER_TARGET_HINT_TEXT: Record<RenderTarget, string> = {
-	word: "Rich HTML + plain text copy for Word pastes.",
-	google_docs: "Rich HTML + plain text copy for Google Docs pastes.",
-	notion: "Rich HTML + plain text copy for Notion pastes.",
-	email: "Rich HTML + plain text copy for email composers.",
-	github: "Markdown-first output for GitHub markdown fields.",
-	llm: "Markdown-first output for LLM prompts and chat inputs.",
-	slack: "Plain-text markdown output for copy/paste into Slack composer.",
-	whatsapp: "Plain-text markers and links normalized for WhatsApp paste.",
-	telegram: "Conservative markdown marker set and plain link fallback.",
-	signal: "Plain-text safe output. Unsupported markdown is stripped.",
-	imessage: "Plain-text safe output. Unsupported markdown is stripped.",
-	google_chat: "Plain-text safe output for Google Chat composer pastes.",
-	line: "Plain-text safe output for LINE composer pastes.",
-	wechat: "Plain-text safe output for WeChat composer pastes.",
-	matrix: "Plain-text safe output for Matrix/Element composer pastes.",
-	messaging: "Generic plain-text profile for chat apps with varied parsing.",
-	excel: "Plain-text cell-friendly output for spreadsheet pastes.",
-	google_sheets: "Plain-text cell-friendly output for Sheets pastes.",
-	latex: "Plain-text output with markdown links converted to \\\\url{}.",
-	terminal: "Plain-text output for terminal pastes without wrappers.",
+	word: "Rich HTML + plain text copy for Word pastes",
+	google_docs: "Rich HTML + plain text copy for Google Docs pastes",
+	notion: "Rich HTML + plain text copy for Notion pastes",
+	email: "Rich HTML + plain text copy for email composers",
+	github: "Markdown-first output for GitHub markdown fields",
+	llm: "Markdown-first output for LLM prompts and chat inputs",
+	slack: "Plain-text markdown output for copy/paste into Slack composer",
+	whatsapp: "Plain-text markers and links normalized for WhatsApp paste",
+	telegram: "Conservative markdown marker set and plain link fallback",
+	signal: "Plain-text safe output. Unsupported markdown is stripped",
+	imessage: "Plain-text safe output. Unsupported markdown is stripped",
+	google_chat: "Plain-text safe output for Google Chat composer pastes",
+	line: "Plain-text safe output for LINE composer pastes",
+	wechat: "Plain-text safe output for WeChat composer pastes",
+	matrix: "Plain-text safe output for Matrix/Element composer pastes",
+	messaging: "Generic plain-text profile for chat apps with varied parsing",
+	excel: "Plain-text cell-friendly output for spreadsheet pastes",
+	google_sheets: "Plain-text cell-friendly output for Sheets pastes",
+	latex: "Plain-text output with markdown links converted to \\\\url{}",
+	terminal: "Plain-text output for terminal pastes without wrappers",
 };
 
 function getGraphStorageScope(): string {
@@ -619,8 +621,13 @@ function getSettingsFromDom(): settings {
 	};
 }
 
+export function getCurrentFormatterSettings(): settings {
+	return getSettingsFromDom();
+}
+
 function getUiSettingsFromDom(): uiSettings {
 	const renderTargetValue = getElementValue(`#${RENDER_TARGET_SETTING_ID}`);
+	const backlinksScopeValue = getElementValue("#rgef_backlinks_scope");
 	const renderTarget = isRenderTarget(renderTargetValue)
 		? renderTargetValue
 		: DEFAULT_RENDER_TARGET;
@@ -628,6 +635,8 @@ function getUiSettingsFromDom(): uiSettings {
 		enable_rendered_preview: getCheckboxValue(RENDERED_PREVIEW_SETTING_ID),
 		render_target_group: findGroupForTarget(renderTarget),
 		render_target: renderTarget,
+		include_backlinks: getCheckboxValue("rgef_include_backlinks"),
+		backlinks_scope: backlinksScopeValue === "page" ? "page" : "target",
 	};
 }
 
@@ -849,26 +858,34 @@ function convertTodoAndDone(input: string) {
 function removeTodos(input: string) {
 	const lines = input.split(BLOCK_DELIMITER);
 	const outputLines: string[] = [];
-	const todoTokenPattern =
-		/\{\{\[\[(?:TODO|DONE|ARCHIVED)\]\]\}\}|\[\[(?:TODO|DONE|ARCHIVED)\]\]|\b(?:TODO|DONE|ARCHIVED)\b/;
+	const todoStateAtLineStartPattern =
+		/^(\s*(?:-\s*)?)(?:\{\{\[\[(?:TODO|DONE|ARCHIVED)\]\]\}\}|\[\[(?:TODO|DONE|ARCHIVED)\]\]|(?:TODO|DONE|ARCHIVED)\b)\s*/i;
+	const markdownTaskPattern = /^(\s*(?:-\s*)?)\[(?:\s|x|X)\]\s*/;
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
-		const hadTodoToken = todoTokenPattern.test(line);
-		const cleaned = line
-			.replace(/\{\{\[\[TODO\]\]\}\}\s?/g, "")
-			.replace(/\{\{\[\[DONE\]\]\}\}\s?/g, "")
-			.replace(/\{\{\[\[ARCHIVED\]\]\}\}\s?/g, "")
-			.replace(/\[\[TODO\]\]\s?/g, "")
-			.replace(/\[\[DONE\]\]\s?/g, "")
-			.replace(/\[\[ARCHIVED\]\]\s?/g, "")
-			.replace(/\bTODO\b\s?/g, "")
-			.replace(/\bDONE\b\s?/g, "")
-			.replace(/\bARCHIVED\b\s?/g, "")
-			.trimEnd();
+		let cleaned = line;
+		let removedTodoMarker = false;
+
+		for (let pass = 0; pass < 8; pass++) {
+			const previous = cleaned;
+			cleaned = cleaned
+				.replace(markdownTaskPattern, "$1")
+				.replace(todoStateAtLineStartPattern, "$1");
+			if (cleaned !== previous) {
+				removedTodoMarker = true;
+				continue;
+			}
+			break;
+		}
+
+		cleaned = cleaned.replace(/^(\s*-\s)\s+/gm, "$1").trimEnd();
 
 		// If TODO/DONE/ARCHIVED markers were the whole line (or just a bullet wrapper), drop it.
-		if (hadTodoToken && (cleaned.trim() === "" || /^\s*-\s*$/.test(cleaned))) {
+		if (
+			removedTodoMarker &&
+			(cleaned.trim() === "" || /^\s*-\s*$/.test(cleaned))
+		) {
 			continue;
 		}
 
@@ -1184,28 +1201,106 @@ function removeCalloutMarkers(input: string) {
 	return outputLines.join(BLOCK_DELIMITER);
 }
 
-function removeCodeBlocks(input: string) {
-	const lines = input.split(BLOCK_DELIMITER);
-	const outputLines: string[] = [];
-	let inFenceBlock = false;
+function findFenceRunLength(line: string, start: number, fenceChar: string): number {
+	let index = start;
+	while (index < line.length && line[index] === fenceChar) {
+		index++;
+	}
+	return index - start;
+}
 
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i];
+function findNextFenceStart(line: string, start: number): number {
+	for (let i = start; i < line.length; i++) {
+		const char = line[i];
+		if (char !== "`" && char !== "~") {
+			continue;
+		}
+		if (findFenceRunLength(line, i, char) >= 3) {
+			return i;
+		}
+	}
+	return -1;
+}
 
-		if (inFenceBlock) {
-			const fenceMatches = line.match(/```/g);
-			if ((fenceMatches?.length ?? 0) % 2 === 1) {
-				inFenceBlock = false;
+function findClosingFenceStart(
+	line: string,
+	start: number,
+	fenceChar: string,
+	minFenceLength: number
+): number {
+	for (let i = start; i < line.length; i++) {
+		if (line[i] !== fenceChar) {
+			continue;
+		}
+		if (findFenceRunLength(line, i, fenceChar) >= minFenceLength) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+function stripFencedCodeSegmentsFromLine(
+	line: string,
+	state: { inFence: boolean; fenceChar: string; fenceLength: number }
+): string {
+	let output = "";
+	let cursor = 0;
+
+	while (cursor < line.length) {
+		if (!state.inFence) {
+			const fenceStart = findNextFenceStart(line, cursor);
+			if (fenceStart < 0) {
+				output += line.slice(cursor);
+				break;
 			}
+
+			output += line.slice(cursor, fenceStart);
+			const fenceChar = line[fenceStart];
+			const fenceLength = findFenceRunLength(line, fenceStart, fenceChar);
+			state.inFence = true;
+			state.fenceChar = fenceChar;
+			state.fenceLength = fenceLength;
+			cursor = fenceStart + fenceLength;
 			continue;
 		}
 
-		let cleaned = line.replace(/```[\s\S]*?```/g, "");
-		const openFenceIndex = cleaned.indexOf("```");
-		if (openFenceIndex >= 0) {
-			cleaned = cleaned.slice(0, openFenceIndex);
-			inFenceBlock = true;
+		const closingFenceStart = findClosingFenceStart(
+			line,
+			cursor,
+			state.fenceChar,
+			state.fenceLength
+		);
+		if (closingFenceStart < 0) {
+			cursor = line.length;
+			break;
 		}
+
+		const closingFenceLength = findFenceRunLength(
+			line,
+			closingFenceStart,
+			state.fenceChar
+		);
+		state.inFence = false;
+		state.fenceChar = "";
+		state.fenceLength = 0;
+		cursor = closingFenceStart + closingFenceLength;
+	}
+
+	return output;
+}
+
+function removeCodeBlocks(input: string) {
+	const lines = input.split(BLOCK_DELIMITER);
+	const outputLines: string[] = [];
+	const fenceState = {
+		inFence: false,
+		fenceChar: "",
+		fenceLength: 0,
+	};
+
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		let cleaned = stripFencedCodeSegmentsFromLine(line, fenceState);
 
 		cleaned = cleaned.replace(/^(\s*-\s)\s+/gm, "$1").trimEnd();
 		if (cleaned.trim() === "" || /^\s*(?:[-*+]|\d+\.)?\s*$/.test(cleaned)) {
